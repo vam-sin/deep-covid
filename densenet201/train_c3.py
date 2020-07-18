@@ -103,7 +103,7 @@ with tf.device('/cpu:0'):
 	print('\nAccuracy: {:.2f}\n'.format(accuracy_score(y_true, y_pred)))
 
 	print('\nClassification Report\n')
-	print(classification_report(y_true, y_pred, target_names=['COVID-19', 'Normal', 'Pneumonia'])) 
+	print(classification_report(y_true, y_pred, target_names=['COVID-19', 'Normal', 'Pneumonia'], output_dict = True)) 
 
 	sens = (cm[0][0] + cm[1][1] + cm[2][2])/(cm[0][0] + cm[1][1] + cm[2][2] + cm[1][0] + cm[2][0] + cm[0][1] + cm[2][1] + cm[0][2] + cm[1][2])
 	spec = (cm[1][1] + cm[1][2] + cm[2][1] + cm[2][2] + cm[0][0] + cm[0][2] + cm[2][0] + cm[2][2] + cm[0][0] + cm[0][1] + cm[1][0] + cm[1][1])/(cm[1][1] + cm[1][2] + cm[2][1] + cm[2][2] + cm[0][0] + cm[0][2] + cm[2][0] + cm[2][2] + cm[0][0] + cm[0][1] + cm[1][0] + cm[1][1] + cm[1][0] + cm[2][0] + cm[0][1] + cm[2][1] + cm[0][2] + cm[1][2] )

@@ -14,7 +14,6 @@ import numpy as np
 from keras.models import Model 
 from keras.layers import Dense, Input, Dropout, Flatten
 from sklearn.metrics import roc_auc_score
-from sklearn.metrics import roc_auc_score
 from sklearn.metrics import roc_curve, auc, roc_auc_score
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 
@@ -58,11 +57,11 @@ test_data = gen.flow_from_directory('../data/squeezenet/test', target_size = (22
 print(train_data.class_indices)
 # model
 num_classes = 3
-vgg19 = keras.applications.VGG19(include_top = False, weights = "imagenet")
+densenet121 = keras.applications.DenseNet121(include_top = False, weights = "imagenet")
 
 _input = Input(shape=(224, 224, 3), name = 'image_input')
 #Use the generated model 
-doutput = vgg19(_input)
+doutput = densenet121(_input)
 
 #Add the fully-connected layers 
 x = Flatten(name='flatten')(doutput)
@@ -79,80 +78,81 @@ model = Model(inputs=_input, outputs=x)
 opt = keras.optimizers.SGD(learning_rate = 1e-3)
 model.compile(optimizer = opt, loss = 'categorical_crossentropy', metrics = ['accuracy'])
 
-mcp_save = keras.callbacks.callbacks.ModelCheckpoint('vgg19_c3.h5', save_best_only=True, monitor='val_accuracy', verbose=1)
+filepath = "chexnet_c3-{epoch:02d}-{val_accuracy:.2f}.hdf5"
+mcp_save = keras.callbacks.callbacks.ModelCheckpoint(filepath, save_best_only=False, monitor='val_accuracy', verbose=1)
 reduce_lr = keras.callbacks.callbacks.ReduceLROnPlateau(monitor='val_accuracy', factor=0.1, patience=10, verbose=1, mode='auto', min_delta=0.0001, cooldown=0, min_lr=0)
 callbacks_list = [mcp_save, reduce_lr]
 
 weights = {0: 1., 1: 1.}
 # with tf.device('/cpu:0'):
-# model.fit_generator(train_data, steps_per_epoch = len(train_data), epochs = 10, validation_data = test_data, validation_steps = len(test_data), callbacks = callbacks_list)
+# 	model.fit_generator(train_data, steps_per_epoch = len(train_data), epochs = 10, validation_data = test_data, validation_steps = len(test_data), callbacks = callbacks_list)
 
 # Evaluate
-# with tf.device('/cpu:0'):
-print("Evaluating")
-model = keras.models.load_model('vgg19_c3.h5')
-y_pred = model.predict_generator(test_data, math.ceil(len(test_data) // bs), workers = 1, pickle_safe = True, verbose = 1)
-y_pred = np.argmax(y_pred, axis=1)
-print(len(y_pred))
-y_true = test_data.classes
+with tf.device('/cpu:0'):
+	print("Evaluating")
+	model = keras.models.load_model('chexnet_c3.hdf5')
+	y_pred = model.predict_generator(test_data, math.ceil(len(test_data) // bs), workers = 1, pickle_safe = True, verbose = 1)
+	y_pred = np.argmax(y_pred, axis=1)
+	print(len(y_pred))
+	y_true = test_data.classes
 
-print('Confusion Matrix')
-cm = confusion_matrix(y_true, y_pred)
-print(cm)
+	print('Confusion Matrix')
+	cm = confusion_matrix(y_true, y_pred)
+	print(cm)
 
-# accuracy, precision, recall, f1 score, sensitivity, specificity, auc
-print('\nAccuracy: {:.2f}\n'.format(accuracy_score(y_true, y_pred)))
+	# accuracy, precision, recall, f1 score, sensitivity, specificity, auc
+	print('\nAccuracy: {:.2f}\n'.format(accuracy_score(y_true, y_pred)))
 
-print('\nClassification Report\n')
-print(classification_report(y_true, y_pred, target_names=['COVID-19', 'Normal', 'Pneumonia'], output_dict = True)) 
+	print('\nClassification Report\n')
+	print(classification_report(y_true, y_pred, target_names=['COVID-19', 'Normal', 'Pneumonia'], output_dict = True)) 
 
-sens = (cm[0][0] + cm[1][1] + cm[2][2])/(cm[0][0] + cm[1][1] + cm[2][2] + cm[1][0] + cm[2][0] + cm[0][1] + cm[2][1] + cm[0][2] + cm[1][2])
-spec = (cm[1][1] + cm[1][2] + cm[2][1] + cm[2][2] + cm[0][0] + cm[0][2] + cm[2][0] + cm[2][2] + cm[0][0] + cm[0][1] + cm[1][0] + cm[1][1])/(cm[1][1] + cm[1][2] + cm[2][1] + cm[2][2] + cm[0][0] + cm[0][2] + cm[2][0] + cm[2][2] + cm[0][0] + cm[0][1] + cm[1][0] + cm[1][1] + cm[1][0] + cm[2][0] + cm[0][1] + cm[2][1] + cm[0][2] + cm[1][2] )
-prec = (cm[0][0] + cm[1][1] + cm[2][2])/(cm[0][0] + cm[1][1] + cm[2][2] + cm[1][0] + cm[2][0] + cm[0][1] + cm[2][1] + cm[0][2] + cm[1][2])
+	sens = (cm[0][0] + cm[1][1] + cm[2][2])/(cm[0][0] + cm[1][1] + cm[2][2] + cm[1][0] + cm[2][0] + cm[0][1] + cm[2][1] + cm[0][2] + cm[1][2])
+	spec = (cm[1][1] + cm[1][2] + cm[2][1] + cm[2][2] + cm[0][0] + cm[0][2] + cm[2][0] + cm[2][2] + cm[0][0] + cm[0][1] + cm[1][0] + cm[1][1])/(cm[1][1] + cm[1][2] + cm[2][1] + cm[2][2] + cm[0][0] + cm[0][2] + cm[2][0] + cm[2][2] + cm[0][0] + cm[0][1] + cm[1][0] + cm[1][1] + cm[1][0] + cm[2][0] + cm[0][1] + cm[2][1] + cm[0][2] + cm[1][2] )
+	prec = (cm[0][0] + cm[1][1] + cm[2][2])/(cm[0][0] + cm[1][1] + cm[2][2] + cm[1][0] + cm[2][0] + cm[0][1] + cm[2][1] + cm[0][2] + cm[1][2])
 
-print("Per class Sensitivity is the same as Per class Recall")
+	print("Per class Sensitivity is the same as Per class Recall")
 
-# Sensitivity
-tpc = cm[0][0]
-tpn = cm[1][1]
-tpp = cm[2][2]
+	# Sensitivity
+	tpc = cm[0][0]
+	tpn = cm[1][1]
+	tpp = cm[2][2]
 
-fpc = cm[1][0] + cm[2][0]
-fpn = cm[0][1] + cm[2][1]
-fpp = cm[0][2] + cm[1][2]
+	fpc = cm[1][0] + cm[2][0]
+	fpn = cm[0][1] + cm[2][1]
+	fpp = cm[0][2] + cm[1][2]
 
-fnc = cm[0][1] + cm[0][2]
-fnn = cm[1][0] + cm[1][2]
-fnp = cm[2][0] + cm[2][1]
+	fnc = cm[0][1] + cm[0][2]
+	fnn = cm[1][0] + cm[1][2]
+	fnp = cm[2][0] + cm[2][1]
 
-tnc = np.sum(cm) - tpc - fpc - fnc
-tnn = np.sum(cm) - tpn - fpn - fnn
-tnp = np.sum(cm) - tpp - fpp - fnp
+	tnc = np.sum(cm) - tpc - fpc - fnc
+	tnn = np.sum(cm) - tpn - fpn - fnn
+	tnp = np.sum(cm) - tpp - fpp - fnp
 
-print("\nSensitivity\n")
-csens = tpc/(tpc + fnc)
-nsens = tpn/(tpn + fnn)
-psens = tpp/(tpp + fnp)
-weighted_sens = (csens + nsens + psens)/3
+	print("\nSensitivity\n")
+	csens = tpc/(tpc + fnc)
+	nsens = tpn/(tpn + fnn)
+	psens = tpp/(tpp + fnp)
+	weighted_sens = (csens + nsens + psens)/3
 
-print("COVID-19 Sensitivity: ", csens)
-print("Normal Sensitivity: ", nsens)
-print("Pneumonia Sensitivity: ", psens)
-print("Weighted Sensitivity: ", weighted_sens)
+	print("COVID-19 Sensitivity: ", csens)
+	print("Normal Sensitivity: ", nsens)
+	print("Pneumonia Sensitivity: ", psens)
+	print("Weighted Sensitivity: ", weighted_sens)
 
-# Specificity
-print("\nSpecificity\n")
-cspec = tnc/(tnc + fpc)
-nspec = tnn/(tnn + fpn)
-pspec = tnp/(tnp + fpp)
-w_spec = (cspec + nspec + psens)/3
+	# Specificity
+	print("\nSpecificity\n")
+	cspec = tnc/(tnc + fpc)
+	nspec = tnn/(tnn + fpn)
+	pspec = tnp/(tnp + fpp)
+	w_spec = (cspec + nspec + psens)/3
 
-print("COVID-19 Specificity: ", cspec)
-print("Normal Specificity: ", nspec)
-print("Pneumonia Specificity: ", pspec)
-print("Weighted Specificity: ", w_spec)
+	print("COVID-19 Specificity: ", cspec)
+	print("Normal Specificity: ", nspec)
+	print("Pneumonia Specificity: ", pspec)
+	print("Weighted Specificity: ", w_spec)
 
 '''
-Results:
-loss: 0.0113 - accuracy: 0.9971 - val_loss: 2.1458e-05 - val_accuracy: 1.0000
+Results: 
+loss: 0.0897 - accuracy: 0.9732 - val_loss: 1.1692e-04 - val_accuracy: 0.9962
 '''
