@@ -14,7 +14,7 @@ import numpy as np
 from keras.models import Model 
 from keras.layers import Dense, Input, Dropout, Flatten
 from sklearn.metrics import roc_auc_score
-
+ 
 # GPU
 from tensorflow.compat.v1 import ConfigProto
 from tensorflow.compat.v1 import InteractiveSession
@@ -45,8 +45,8 @@ if gpus:
 bs = 1
 gen = ImageDataGenerator(rotation_range=15, width_shift_range=0.05, height_shift_range=0.05, rescale=1./255)
 
-train_data = gen.flow_from_directory('../data/squeezenet/train', target_size = (224, 224), batch_size = bs, class_mode = 'categorical', classes=['COVID-19', 'Normal'])
-test_data = gen.flow_from_directory('../data/squeezenet/test', target_size = (224, 224), batch_size = bs, class_mode = 'categorical', shuffle=False, classes=['COVID-19', 'Normal'])
+train_data = gen.flow_from_directory('../data/data/train', target_size = (224, 224), batch_size = bs, class_mode = 'categorical', classes=['COVID-19', 'Normal'])
+test_data = gen.flow_from_directory('../data/data/test', target_size = (224, 224), batch_size = bs, class_mode = 'categorical', shuffle=False, classes=['COVID-19', 'Normal'])
 
 # for i in range(len(train_data)):
 # 	X, y = next(train_data)
@@ -55,34 +55,51 @@ test_data = gen.flow_from_directory('../data/squeezenet/test', target_size = (22
 print(train_data.class_indices)
 # model
 num_classes = 2
-densenet121 = keras.applications.DenseNet121(include_top = False, weights = "imagenet")
+# densenet121 = keras.applications.DenseNet121(include_top = False, weights = "imagenet")
 
-_input = Input(shape=(224, 224, 3), name = 'image_input')
-#Use the generated model 
-doutput = densenet121(_input)
+# _input = Input(shape=(224, 224, 3), name = 'image_input')
+# #Use the generated model 
+# doutput = densenet121(_input)
 
-#Add the fully-connected layers 
-x = Flatten(name='flatten')(doutput)
-x = Dense(1024, activation='relu', name='fc1')(x)
-# x = Dropout(0.5)(x)
-x = Dense(1024, activation='relu', name='fc2')(x)
-# x = Dropout(0.5)(x)
-x = Dense(num_classes, activation='softmax', name='predictions')(x)
+# #Add the fully-connected layers 
+# x = Flatten(name='flatten')(doutput)
+# x = Dense(1024, activation='relu', name='fc1')(x)
+# x = Dropout(0.9)(x)
+# x = Dense(1024, activation='relu', name='fc2')(x)
+# x = Dropout(0.7)(x)
+# x = Dense(num_classes, activation='softmax', name='predictions')(x)
 
-#Create your own model 
-model = Model(inputs=_input, outputs=x)
+# #Create your own model 
+# model = Model(inputs=_input, outputs=x)
+# print(model.summary())
 
 # sgd 
-opt = keras.optimizers.SGD(learning_rate = 1e-3)
-model.compile(optimizer = opt, loss = 'binary_crossentropy', metrics = ['accuracy'])
+# opt = keras.optimizers.Adam(learning_rate = 1e-7)
+opt = keras.optimizers.SGD(learning_rate = 1e-5)
+# model.compile(optimizer = opt, loss = 'binary_crossentropy', metrics = ['accuracy'])
 
 mcp_save = keras.callbacks.callbacks.ModelCheckpoint('chexnet_c2.h5', save_best_only=True, monitor='val_accuracy', verbose=1)
-reduce_lr = keras.callbacks.callbacks.ReduceLROnPlateau(monitor='val_accuracy', factor=0.1, patience=10, verbose=1, mode='auto', min_delta=0.0001, cooldown=0, min_lr=0)
+reduce_lr = keras.callbacks.callbacks.ReduceLROnPlateau(monitor='val_accuracy', factor=0.1, patience=5, verbose=1, mode='auto', min_delta=0.0001, cooldown=0, min_lr=0)
 callbacks_list = [mcp_save, reduce_lr]
 
-weights = {0: 1., 1: 1.}
-# with tf.device('/cpu:0'):
-# model.fit_generator(train_data, steps_per_epoch = len(train_data), epochs = 100, validation_data = test_data, validation_steps = len(test_data), callbacks = callbacks_list)
+# weights = {0: 1., 1: 1.}
+with tf.device('/cpu:0'):
+	model = keras.models.load_model('chexnet_c2_82.h5')
+	fc1 = model.layers[-3]
+	fc2 = model.layers[-2]
+	predictions = model.layers[-1]
+
+	# Create the dropout layers
+	# Reconnect the layers
+	x = fc1.output
+	x = fc2(x)
+	x = Dropout(0.1, name="dr8")(x)
+	predictors = predictions(x)
+
+	# Create a new model
+	model2 = Model(input=model.input, output=predictors)
+	model2.compile(optimizer = opt, loss = 'binary_crossentropy', metrics = ['accuracy'])
+	model2.fit_generator(train_data, steps_per_epoch = 100, epochs = math.ceil(len(train_data) // 100), validation_data = test_data, validation_steps = len(test_data), callbacks = callbacks_list)
 
 # Evaluate
 with tf.device('/cpu:0'):
@@ -123,5 +140,11 @@ with tf.device('/cpu:0'):
 
 '''
 Results: 
-loss: 0.0897 - accuracy: 0.9732 - val_loss: 1.1692e-04 - val_accuracy: 0.9962
+Accuracy:  0.79
+Sensitivity:  0.9
+Specificity:  0.68
+Precision:  0.7377049180327869
+Recall:  0.9
+F1 Score:  0.8108108108108109
+AUC Score:  0.7899999999999999
 '''

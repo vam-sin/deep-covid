@@ -45,8 +45,8 @@ if gpus:
 bs = 1
 gen = ImageDataGenerator(rotation_range=15, width_shift_range=0.05, height_shift_range=0.05, rescale=1./255)
 
-train_data = gen.flow_from_directory('../data/squeezenet/train', target_size = (224, 224), batch_size = bs, class_mode = 'categorical', classes=['COVID-19', 'Normal'])
-test_data = gen.flow_from_directory('../data/squeezenet/test', target_size = (224, 224), batch_size = bs, class_mode = 'categorical', shuffle=False, classes=['COVID-19', 'Normal'])
+train_data = gen.flow_from_directory('../data/data/train', target_size = (224, 224), batch_size = bs, class_mode = 'categorical', classes=['COVID-19', 'Normal'])
+test_data = gen.flow_from_directory('../data/data/test', target_size = (224, 224), batch_size = bs, class_mode = 'categorical', shuffle=False, classes=['COVID-19', 'Normal'])
 
 # for i in range(len(train_data)):
 # 	X, y = next(train_data)
@@ -55,34 +55,37 @@ test_data = gen.flow_from_directory('../data/squeezenet/test', target_size = (22
 print(train_data.class_indices)
 # model
 num_classes = 2
-res101 = keras.applications.MobileNetV2(include_top = False, weights = "imagenet")
+mob = keras.applications.MobileNetV2(include_top = False, weights = "imagenet")
 
 _input = Input(shape=(224, 224, 3), name = 'image_input')
 #Use the generated model 
-doutput = res101(_input)
+doutput = mob(_input)
 
+doutput = Dropout(0.2)(doutput)
 #Add the fully-connected layers 
 x = Flatten(name='flatten')(doutput)
 # x = Dense(512, activation='relu', name='fc1')(x)
-x = Dropout(0.7)(x)
+x = Dropout(0.2)(x)
 # x = Dense(512, activation='relu', name='fc2')(x)
-x = Dropout(0.7)(x)
+# x = Dropout(0.7)(x)
 x = Dense(num_classes, activation='softmax', name='predictions')(x)
 
 #Create your own model 
 model = Model(inputs=_input, outputs=x)
+print(model.summary())
 
 # sgd 
 opt = keras.optimizers.Adam(learning_rate = 1e-4)
 model.compile(optimizer = opt, loss = 'binary_crossentropy', metrics = ['accuracy'])
 
 mcp_save = keras.callbacks.callbacks.ModelCheckpoint('mobilenetv2_c2.h5', save_best_only=True, monitor='val_accuracy', verbose=1)
-reduce_lr = keras.callbacks.callbacks.ReduceLROnPlateau(monitor='val_accuracy', factor=0.1, patience=10, verbose=1, mode='auto', min_delta=0.0001, cooldown=0, min_lr=0)
+reduce_lr = keras.callbacks.callbacks.ReduceLROnPlateau(monitor='val_accuracy', factor=0.1, patience=5, verbose=1, mode='auto', min_delta=0.0001, cooldown=0, min_lr=0)
 callbacks_list = [mcp_save, reduce_lr]
 
 weights = {0: 1., 1: 1.}
 # with tf.device('/cpu:0'):
-# model.fit_generator(train_data, steps_per_epoch = len(train_data), epochs = 100, validation_data = test_data, validation_steps = len(test_data), callbacks = callbacks_list)
+# model = keras.models.load_model('mobilenetv2_c2.h5')
+model.fit_generator(train_data, steps_per_epoch = 1000, epochs = 100, validation_data = test_data, validation_steps = len(test_data), callbacks = callbacks_list)
 
 # Evaluate
 # with tf.device('/cpu:0'):
@@ -124,4 +127,5 @@ print("AUC Score: ", auc)
 '''
 Results: 
 loss: 0.0897 - accuracy: 0.9732 - val_loss: 1.1692e-04 - val_accuracy: 0.9962
+
 '''

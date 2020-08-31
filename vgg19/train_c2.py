@@ -45,8 +45,8 @@ if gpus:
 bs = 1
 gen = ImageDataGenerator(rotation_range=15, width_shift_range=0.05, height_shift_range=0.05, rescale=1./255)
 
-train_data = gen.flow_from_directory('../data/squeezenet/train', target_size = (224, 224), batch_size = bs, class_mode = 'categorical', classes=['COVID-19', 'Normal'])
-test_data = gen.flow_from_directory('../data/squeezenet/test', target_size = (224, 224), batch_size = bs, class_mode = 'categorical', shuffle=False, classes=['COVID-19', 'Normal'])
+train_data = gen.flow_from_directory('../data/data/train', target_size = (224, 224), batch_size = bs, class_mode = 'categorical', classes=['COVID-19', 'Normal'])
+test_data = gen.flow_from_directory('../data/data/test', target_size = (224, 224), batch_size = bs, class_mode = 'categorical', shuffle=False, classes=['COVID-19', 'Normal'])
 
 # for i in range(len(train_data)):
 # 	X, y = next(train_data)
@@ -71,18 +71,19 @@ x = Dense(num_classes, activation='softmax', name='predictions')(x)
 
 #Create your own model 
 model = Model(inputs=_input, outputs=x)
+print(model.summary())
 
 # sgd 
-opt = keras.optimizers.SGD(learning_rate = 1e-3)
+opt = keras.optimizers.Adam(learning_rate = 1e-5)
 model.compile(optimizer = opt, loss = 'binary_crossentropy', metrics = ['accuracy'])
 
 mcp_save = keras.callbacks.callbacks.ModelCheckpoint('vgg19_c2.h5', save_best_only=True, monitor='val_accuracy', verbose=1)
-reduce_lr = keras.callbacks.callbacks.ReduceLROnPlateau(monitor='val_accuracy', factor=0.1, patience=10, verbose=1, mode='auto', min_delta=0.0001, cooldown=0, min_lr=0)
+reduce_lr = keras.callbacks.callbacks.ReduceLROnPlateau(monitor='val_accuracy', factor=0.1, patience=5, verbose=1, mode='auto', min_delta=0.0001, cooldown=0, min_lr=0)
 callbacks_list = [mcp_save, reduce_lr]
 
 weights = {0: 1., 1: 1.}
 # with tf.device('/cpu:0'):
-# model.fit_generator(train_data, steps_per_epoch = len(train_data), epochs = 10, validation_data = test_data, validation_steps = len(test_data), callbacks = callbacks_list)
+# 	model.fit_generator(train_data, steps_per_epoch = len(train_data), epochs = 100, validation_data = test_data, validation_steps = len(test_data), callbacks = callbacks_list)
 
 # Evaluate
 # with tf.device('/cpu:0'):
@@ -124,4 +125,13 @@ print("AUC Score: ", auc)
 '''
 Results:
 loss: 0.0113 - accuracy: 0.9971 - val_loss: 2.1458e-05 - val_accuracy: 1.0000
+Confusion Matrix:  [[95  5]
+ [ 5 95]]
+Accuracy:  0.95
+Sensitivity:  0.95
+Specificity:  0.95
+Precision:  0.95
+Recall:  0.95
+F1 Score:  0.9500000000000001
+AUC Score:  0.95
 '''

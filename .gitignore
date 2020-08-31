@@ -1,7 +1,7 @@
 /papers
 /data
-/squeezenet/squeezenet_new_c2.h5
-/squeezenet/squeezenet_new_c3.h5
+/squeezenet/squeezenet_fulldata_c2.h5
+/squeezenet/squeezenet_fulldata_c3.h5
 /densenet201/densenet201_c2.h5
 /densenet201/densenet201_c3.h5
 /vgg19/vgg19_c2.h5
@@ -9,4 +9,8 @@
 /mobilenetv2/mobilenetv2_c2.h5
 /mobilenetv2/mobilenetv2_c3.h5
 /chexnet/chexnet_c2.h5
+/chexnet/chexnet_c2_79.h5
+/chexnet/chexnet_c2_82.h5
 /chexnet/chexnet_c3.hdf5
+ensemble_best_c2.h5
+ensemble_c2.h5

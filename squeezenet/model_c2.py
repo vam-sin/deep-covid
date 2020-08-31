@@ -48,9 +48,11 @@ def squeezenet(num_classes):
 	avgpool = AveragePooling2D(pool_size = (13,13), strides = 1)(conv10)
 
 	avgpool = Flatten()(conv10)
-	avgpool = Dense(1024, activation = 'relu')(avgpool)
-	avgpool = Dense(1024, activation = 'relu')(avgpool)
-	out = Dense(num_classes, activation = 'softmax')(avgpool)
+	avgpool = Dense(4096, activation = 'relu')(avgpool)
+	# avgpool = Dropout(0.5)(avgpool)
+	avgpool = Dense(4096, activation = 'relu')(avgpool)
+	# avgpool = Dropout(0.5)(avgpool)
+	out = Dense(num_classes, activation = 'sigmoid')(avgpool)
 
 	model = Model(inputs = inp, outputs = out)
 	print(model.summary())
@@ -58,6 +60,11 @@ def squeezenet(num_classes):
 	return model
 
 if __name__ == '__main__':
-	num_classes = 3
+	num_classes = 2
 	model = squeezenet(num_classes)
+
+'''
+Paramaters: 18,901,572
+Validation Accuracy: Has to be > 99.6
+'''
 

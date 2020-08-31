@@ -4,7 +4,7 @@
 from numpy.random import seed
 import math
 seed(42)
-from tensorflow.compat.v1 import set_random_seed
+from tensorflow.compat.v1 import set_random_seed 
 set_random_seed(42)
 # libraries
 from keras.preprocessing.image import ImageDataGenerator
@@ -44,8 +44,8 @@ if gpus:
 bs = 1
 gen = ImageDataGenerator(rotation_range=15, width_shift_range=0.05, height_shift_range=0.05, rescale=1./255)
 
-train_data = gen.flow_from_directory('../data/squeezenet/train', target_size = (224, 224), batch_size = bs, class_mode = 'categorical', classes=['COVID-19', 'Normal'])
-test_data = gen.flow_from_directory('../data/squeezenet/test', target_size = (224, 224), batch_size = bs, class_mode = 'categorical', shuffle=False, classes=['COVID-19', 'Normal'])
+train_data = gen.flow_from_directory('../data/data/train', target_size = (224, 224), batch_size = bs, class_mode = 'categorical', classes=['COVID-19', 'Normal'])
+test_data = gen.flow_from_directory('../data/data/test', target_size = (224, 224), batch_size = bs, class_mode = 'categorical', shuffle=False, classes=['COVID-19', 'Normal'])
 
 # for i in range(len(train_data)):
 # 	X, y = next(train_data)
@@ -59,15 +59,15 @@ model = squeezenet(num_classes)
 opt = keras.optimizers.Adam(learning_rate = 1e-6)
 model.compile(optimizer = opt, loss = 'binary_crossentropy', metrics = ['accuracy'])
 
-mcp_save = keras.callbacks.callbacks.ModelCheckpoint('squeezenet_new_c2.h5', save_best_only=True, monitor='val_accuracy', verbose=1)
+mcp_save = keras.callbacks.callbacks.ModelCheckpoint('squeezenet_fulldata_c2_new.h5', save_best_only=True, monitor='val_accuracy', verbose=1)
 reduce_lr = keras.callbacks.callbacks.ReduceLROnPlateau(monitor='val_accuracy', factor=0.1, patience=10, verbose=1, mode='auto', min_delta=0.0001, cooldown=0, min_lr=0)
 callbacks_list = [mcp_save, reduce_lr]
 
 weights = {0: 1., 1: 1.}
-# model.fit_generator(train_data, steps_per_epoch = len(train_data), epochs = 30, validation_data = test_data, validation_steps = len(test_data), callbacks = callbacks_list)
+model.fit_generator(train_data, steps_per_epoch = len(train_data), epochs = 100, validation_data = test_data, validation_steps = len(test_data), callbacks = callbacks_list)
 
 # Evaluate
-model = keras.models.load_model('squeezenet_new_c2.h5')
+model = keras.models.load_model('squeezenet_fulldata_c2_new.h5')
 y_pred = model.predict_generator(test_data, math.ceil(len(test_data) // bs), workers = 1, pickle_safe = True)
 y_pred = np.argmax(y_pred, axis=1)
 print(len(y_pred))

@@ -12,7 +12,7 @@ import keras
 from sklearn.metrics import classification_report, confusion_matrix
 import numpy as np
 from keras.models import Model 
-from keras.layers import Dense, Input, Dropout, Flatten
+from keras.layers import Dense, Input, Dropout, Flatten, BatchNormalization
 from sklearn.metrics import roc_auc_score
 
 # GPU
@@ -45,8 +45,8 @@ if gpus:
 bs = 1
 gen = ImageDataGenerator(rotation_range=15, width_shift_range=0.05, height_shift_range=0.05, rescale=1./255)
 
-train_data = gen.flow_from_directory('../data/squeezenet/train', target_size = (224, 224), batch_size = bs, class_mode = 'categorical', classes=['COVID-19', 'Normal'])
-test_data = gen.flow_from_directory('../data/squeezenet/test', target_size = (224, 224), batch_size = bs, class_mode = 'categorical', shuffle=False, classes=['COVID-19', 'Normal'])
+train_data = gen.flow_from_directory('../data/data/train', target_size = (224, 224), batch_size = bs, class_mode = 'categorical', classes=['COVID-19', 'Normal'])
+test_data = gen.flow_from_directory('../data/data/test', target_size = (224, 224), batch_size = bs, class_mode = 'categorical', shuffle=False, classes=['COVID-19', 'Normal'])
 
 # for i in range(len(train_data)):
 # 	X, y = next(train_data)
@@ -54,35 +54,59 @@ test_data = gen.flow_from_directory('../data/squeezenet/test', target_size = (22
 
 print(train_data.class_indices)
 # model
-num_classes = 2
-densenet201 = keras.applications.DenseNet201(include_top = False, weights = "imagenet")
+# num_classes = 2
+# densenet201 = keras.applications.DenseNet201(include_top = False, weights = "imagenet")
 
-_input = Input(shape=(224, 224, 3), name = 'image_input')
-#Use the generated model 
-doutput = densenet201(_input)
+# _input = Input(shape=(224, 224, 3), name = 'image_input')
+# #Use the generated model 
+# doutput = densenet201(_input)
 
-#Add the fully-connected layers 
-x = Flatten(name='flatten')(doutput)
-x = Dense(1024, activation='relu', name='fc1')(x)
-# x = Dropout(0.5)(x)
-x = Dense(1024, activation='relu', name='fc2')(x)
-# x = Dropout(0.5)(x)
-x = Dense(num_classes, activation='softmax', name='predictions')(x)
+# #Add the fully-connected layers 
+# x = Flatten(name='flatten')(doutput)
+# x = Dense(1024, activation='relu', name='fc1')(x)
+# x = BatchNormalization()(x)
+# # x = Dropout(0.5)(x)
+# # x = Dropout(0.2)(x)
+# # x = Dropout(0.2)(x)
+# # x = Dropout(0.2)(x)
+# x = Dense(1024, activation='relu', name='fc2')(x)
+# x = BatchNormalization()(x)
+# # x = Dropout(0.5)(x)
+# # x = Dropout(0.2)(x)
+# # x = Dropout(0.2)(x)
+# # x = Dropout(0.2)(x)
+# x = Dense(num_classes, activation='softmax', name='predictions')(x)
 
-#Create your own model 
-model = Model(inputs=_input, outputs=x)
+# #Create your own model 
+# model = Model(inputs=_input, outputs=x)
+# print(model.summary())
 
-# sgd 
-opt = keras.optimizers.SGD(learning_rate = 1e-3)
-model.compile(optimizer = opt, loss = 'binary_crossentropy', metrics = ['accuracy'])
+# # sgd 
+opt = keras.optimizers.Adam(learning_rate = 1e-6)
+# model.compile(optimizer = opt, loss = 'binary_crossentropy', metrics = ['accuracy'])
 
 mcp_save = keras.callbacks.callbacks.ModelCheckpoint('densenet201_c2.h5', save_best_only=True, monitor='val_accuracy', verbose=1)
-reduce_lr = keras.callbacks.callbacks.ReduceLROnPlateau(monitor='val_accuracy', factor=0.1, patience=10, verbose=1, mode='auto', min_delta=0.0001, cooldown=0, min_lr=0)
+reduce_lr = keras.callbacks.callbacks.ReduceLROnPlateau(monitor='val_accuracy', factor=0.1, patience=3, verbose=1, mode='auto', min_delta=0.0001, cooldown=0, min_lr=0)
 callbacks_list = [mcp_save, reduce_lr]
 
 weights = {0: 1., 1: 1.}
-# with tf.device('/cpu:0'):
-# 	model.fit_generator(train_data, steps_per_epoch = len(train_data), epochs = 100, validation_data = test_data, validation_steps = len(test_data), callbacks = callbacks_list)
+with tf.device('/cpu:0'):
+	model = keras.models.load_model('densenet201_c2_855.h5')
+	fc1 = model.layers[-3]
+	fc2 = model.layers[-2]
+	predictions = model.layers[-1]
+
+	# Create the dropout layers
+	# Reconnect the layers
+	x = Dropout(0.7, name="dr3")(fc1.output)
+	x = fc2(x)
+	x = Dropout(0.7, name="dr4")(x)
+	predictors = predictions(x)
+
+	# Create a new model
+	model2 = Model(input=model.input, output=predictors)
+	model2.compile(optimizer = opt, loss = 'binary_crossentropy', metrics = ['accuracy'])
+	model2.fit_generator(train_data, steps_per_epoch = 100, epochs = math.ceil(len(train_data) // 100), validation_data = test_data, validation_steps = len(test_data), callbacks = callbacks_list)
 
 # Evaluate
 with tf.device('/cpu:0'):
@@ -122,6 +146,13 @@ with tf.device('/cpu:0'):
 	print("AUC Score: ", auc)
 
 '''
-Results: 
-loss: 0.0897 - accuracy: 0.9732 - val_loss: 1.1692e-04 - val_accuracy: 0.9962
+Confusion Matrix:  [[87 13]
+ [16 84]]
+Accuracy:  0.855
+Sensitivity:  0.84
+Specificity:  0.87
+Precision:  0.865979381443299
+Recall:  0.84
+F1 Score:  0.8527918781725888
+AUC Score:  0.8549999999999999
 '''
