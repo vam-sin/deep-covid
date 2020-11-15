@@ -2,6 +2,14 @@
 
 A deep learning tool for the detection of COVID-19 by analyzing Chest-Xrays
 
+# Requirements
+
+```python3
+pip3 install tensorflow
+pip3 install keras
+pip3 install Image
+```
+
 Five different State-Of-The-Art Convolutional Neural Network models were developed on the merged dataset of COVID-19 chest x-ray images. The networks are:
 
 1. SqueezeNet
