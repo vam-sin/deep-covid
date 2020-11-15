@@ -7,8 +7,9 @@ A deep learning tool for the detection of COVID-19 by analyzing Chest-Xrays
 ```python3
 pip3 install tensorflow
 pip3 install keras
-pip3 install Image
 ```
+
+# Models
 
 Five different State-Of-The-Art Convolutional Neural Network models were developed on the merged dataset of COVID-19 chest x-ray images. The networks are:
 
@@ -23,5 +24,5 @@ Two class classification of the images into COVID-19 and Non-COVID-19 was conduc
 To run the final fusion model, run the following code.
 
 ```python3
-python3 feature_ensemble2.py
+python3 feature_ensemble_c2.py
 ```
