@@ -15,5 +15,5 @@ Two class classification of the images into COVID-19 and Non-COVID-19 was conduc
 To run the final fusion model, run the following code.
 
 ```python3
-python3 feature_ensemble.py
+python3 feature_ensemble2.py
 ```
